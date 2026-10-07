@@ -1,8 +1,9 @@
-import { ArrowRightIcon, PlayIcon } from "lucide-react";
+import { ArrowRightIcon, PlayIcon, KeyRoundIcon } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Navbar from "../components/common/Navbar";
 import { Link } from "react-router-dom";
+import ForgotPasswordModal from "../components/common/ForgotPasswordModal";
 
 const MARKING_SCHEME = {
     pass_criteria: "90 Hours",
@@ -65,6 +66,7 @@ const MARKING_SCHEME = {
 
 export default function LandingPage() {
     const [activeTab, setActiveTab] = useState("general");
+    const [isForgotOpen, setIsForgotOpen] = useState(false);
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-brand-100 selection:text-brand-900 overflow-x-hidden">
@@ -130,11 +132,19 @@ export default function LandingPage() {
                                     Login
                                     <ArrowRightIcon className="w-5 h-5" />
                                 </Link>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsForgotOpen(true)}
+                                    className="px-8 py-5 bg-white/5 text-gray-300 hover:text-white border border-white/10 rounded-full font-semibold text-base hover:bg-white/10 transition-all backdrop-blur-sm flex items-center gap-2"
+                                >
+                                    <KeyRoundIcon className="w-4 h-4 text-indigo-400" />
+                                    Forgot Password?
+                                </button>
                                 <a
                                     href="#scheme"
-                                    className="px-10 py-5 bg-white/5 text-white border border-white/10 rounded-full font-bold text-lg hover:bg-white/10 transition-all backdrop-blur-sm flex items-center gap-2"
+                                    className="px-8 py-5 bg-transparent text-gray-400 hover:text-white rounded-full font-medium text-base hover:bg-white/5 transition-all flex items-center gap-2"
                                 >
-                                    <PlayIcon className="w-5 h-5 text-gray-300" />
+                                    <PlayIcon className="w-4 h-4" />
                                     Marking Scheme
                                 </a>
                             </motion.div>
@@ -366,6 +376,11 @@ export default function LandingPage() {
                     </p>
                 </div>
             </footer >
+
+            <ForgotPasswordModal
+                isOpen={isForgotOpen}
+                onClose={() => setIsForgotOpen(false)}
+            />
         </div >
     );
 }

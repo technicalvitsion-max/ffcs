@@ -7,10 +7,11 @@ import { useLoader, type LoaderContextType } from "@/context/LoaderContext";
 import { formatName } from "@/lib/formatName";
 import { AlertType, Role, type User } from "@/lib/types";
 import { AuthService } from "@/services/auth";
-import { UserIcon, LogOutIcon, LayoutDashboardIcon, KeyIcon } from "lucide-react";
+import { UserIcon, LogOutIcon, LayoutDashboardIcon, KeyIcon, KeyRoundIcon } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 
 function Navbar() {
   const { user } = useAuth() as AuthContextType;
@@ -18,6 +19,7 @@ function Navbar() {
   const { setLoading } = useLoader() as LoaderContextType;
 
   const navigate = useNavigate();
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
   const handleResetPassword = async () => {
     setLoading(true, "Please wait");
@@ -127,6 +129,16 @@ function Navbar() {
                           <UserIcon className="w-4 h-4" />
                           Login
                         </button>
+                        <button
+                          onClick={() => {
+                            setIsForgotModalOpen(true);
+                            setIsProfileOpen(false);
+                          }}
+                          className="flex items-center gap-3 w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-brand-50 hover:text-brand-700 rounded-xl transition-colors"
+                        >
+                          <KeyRoundIcon className="w-4 h-4 text-indigo-500" />
+                          Forgot Password
+                        </button>
                       </>
                     )}
                   </motion.div>
@@ -136,6 +148,11 @@ function Navbar() {
           </div>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        isOpen={isForgotModalOpen}
+        onClose={() => setIsForgotModalOpen(false)}
+      />
     </nav>
   );
 }

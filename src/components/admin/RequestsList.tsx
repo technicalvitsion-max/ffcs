@@ -7,7 +7,7 @@ import { useError, type ErrorContextType } from "@/context/ErrorContext";
 import { useLoader, type LoaderContextType } from "@/context/LoaderContext";
 import { AlertType, type HourRequest } from "@/lib/types";
 import { RequestsService } from "@/services/requests";
-import { ImageIcon, CheckIcon, XIcon, ClockIcon, CalendarIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { ImageIcon, CheckIcon, XIcon, ClockIcon, CalendarIcon, PencilIcon, TrashIcon, SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,16 +17,19 @@ function RequestsList({
   status,
   setSelectedProofImage,
   setisProofModalOpen,
+  onActionComplete,
 }: {
   status: string;
   setSelectedProofImage: (url: string) => void;
   setisProofModalOpen: (isOpen: boolean) => void;
+  onActionComplete?: () => void;
 }) {
   const { user } = useAuth() as AuthContextType;
   const { error, setError } = useError() as ErrorContextType;
   const { setLoading } = useLoader() as LoaderContextType;
   const { showAlert } = useAlert() as AlertContextType;
   const [requests, setRequests] = useState<HourRequest[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // State for Edit/Approve Modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -39,11 +42,23 @@ function RequestsList({
 
   if (error) return <Navigate to={"/error"} />;
 
-  const filteredRequests = requests.filter((req) => req.status === status);
+  const filteredRequests = requests.filter((req) => {
+    if (req.status !== status) return false;
+    if (!searchQuery.trim()) return true;
+    const lower = searchQuery.toLowerCase();
+    return (
+      (req.name && req.name.toLowerCase().includes(lower)) ||
+      (req.registrationNumber && req.registrationNumber.toLowerCase().includes(lower)) ||
+      (req.workName && req.workName.toLowerCase().includes(lower))
+    );
+  });
 
   const refreshRequests = () => {
     RequestsService.getHourRequests(user!)
-      .then(setRequests)
+      .then((data) => {
+        setRequests(data);
+        onActionComplete?.();
+      })
       .catch(setError);
   };
 
@@ -139,7 +154,25 @@ function RequestsList({
 
   return (
     <>
-      <div className="divide-y divide-white/5">
+      {requests.filter((r) => r.status === status).length > 0 && (
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="relative w-full max-w-sm">
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder={`Filter ${status} by name, ID or work...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-[#0a0a0a] border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/20 text-xs text-white placeholder-gray-500 transition-all"
+            />
+          </div>
+          <span className="text-xs text-gray-500 hidden sm:inline">
+            Showing {filteredRequests.length} requests
+          </span>
+        </div>
+      )}
+
+      <div className="divide-y divide-white/5 bg-[#0a0a0a]/50 rounded-[2rem] border border-white/5 overflow-hidden">
         <AnimatePresence mode="popLayout">
           {filteredRequests.map((request) => {
             return (
@@ -201,98 +234,137 @@ function RequestsList({
                     </div>
                   </div>
 
-                  <div className="flex flex-row lg:flex-col items-center lg:items-end gap-3 min-w-[140px]">
-                    {request.status === "pending" && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setSelectedProofImage(request.proof.url);
-                            setisProofModalOpen(true);
-                          }}
-                          className="flex items-center justify-center gap-2 w-full px-5 py-2.5 bg-white/5 border border-white/10 text-gray-300 text-sm font-bold rounded-full hover:bg-white/10 hover:text-white hover:border-white/20 transition-all shadow-sm"
-                          disabled={!request.proof}
-                        >
-                          {request.proof ? (
-                            <>
-                              <ImageIcon className="w-4 h-4" />
-                              View Proof
-                            </>
-                          ) : (
-                            "No Proof"
-                          )}
-                        </button>
+                  {(() => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const proofUrl = typeof request.proof === "string" ? request.proof : request.proof?.url || (request as any)?.proofUrl || null;
 
-                        <div className="flex items-center gap-2 w-full">
-                          <button
-                            onClick={() => handleReject(request.id)}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-bold rounded-full hover:bg-red-500/20 transition-all shadow-sm"
-                            title="Reject"
-                          >
-                            <XIcon className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleApproveClick(request)}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-black text-sm font-bold rounded-full hover:bg-gray-200 transition-all shadow-sm"
-                            title="Approve / Modify"
-                          >
-                            <CheckIcon className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </>
-                    )}
+                    return (
+                      <div className="flex flex-row lg:flex-col items-center lg:items-end gap-3 min-w-[140px]">
+                        {request.status === "pending" && (
+                          <>
+                            <button
+                              onClick={() => {
+                                if (proofUrl) {
+                                  setSelectedProofImage(proofUrl);
+                                  setisProofModalOpen(true);
+                                }
+                              }}
+                              className={`flex items-center justify-center gap-2 w-full px-5 py-2.5 text-sm font-bold rounded-full transition-all shadow-sm ${
+                                proofUrl
+                                  ? "bg-white/10 border border-white/20 text-white hover:bg-white/20 hover:border-white/30 cursor-pointer"
+                                  : "bg-white/5 border border-white/5 text-gray-500 cursor-not-allowed"
+                              }`}
+                              disabled={!proofUrl}
+                            >
+                              {proofUrl ? (
+                                <>
+                                  <ImageIcon className="w-4 h-4 text-emerald-400" />
+                                  View Proof
+                                </>
+                              ) : (
+                                "No Proof"
+                              )}
+                            </button>
 
-                    {request.status === "approved" && (
-                      <div className="flex flex-col items-end gap-3 w-full">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="px-4 py-1.5 bg-green-500/10 text-green-500 text-xs font-bold rounded-full flex items-center gap-1.5 border border-green-500/20">
-                            <CheckIcon className="w-3 h-3" />
-                            APPROVED
-                          </span>
-                          {request.approved && (
-                            <span className="text-xs text-gray-500">on {request.approved}</span>
-                          )}
-                        </div>
+                            <div className="flex items-center gap-2 w-full">
+                              <button
+                                onClick={() => handleReject(request.id)}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-bold rounded-full hover:bg-red-500/20 transition-all shadow-sm"
+                                title="Reject"
+                              >
+                                <XIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleApproveClick(request)}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-black text-sm font-bold rounded-full hover:bg-gray-200 transition-all shadow-sm"
+                                title="Approve / Modify"
+                              >
+                                <CheckIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </>
+                        )}
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEditClick(request)}
-                            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-                            title="Edit Hours"
-                          >
-                            <PencilIcon className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(request)}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
-                            title="Delete Request"
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {request.status === "approved" && (
+                          <div className="flex flex-col items-end gap-3 w-full">
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="px-4 py-1.5 bg-green-500/10 text-green-500 text-xs font-bold rounded-full flex items-center gap-1.5 border border-green-500/20">
+                                <CheckIcon className="w-3 h-3" />
+                                APPROVED
+                              </span>
+                              {request.approved && (
+                                <span className="text-xs text-gray-500">on {request.approved}</span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {proofUrl && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedProofImage(proofUrl);
+                                    setisProofModalOpen(true);
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                                  title="View Submitted Proof"
+                                >
+                                  <ImageIcon className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleEditClick(request)}
+                                className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                                title="Edit Hours"
+                              >
+                                <PencilIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(request)}
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                                title="Delete Request"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {request.status === "rejected" && (
+                          <div className="flex flex-col items-end gap-3 w-full">
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="px-4 py-1.5 bg-red-500/10 text-red-500 text-xs font-bold rounded-full flex items-center gap-1.5 border border-red-500/20">
+                                <XIcon className="w-3 h-3" />
+                                REJECTED
+                              </span>
+                              {request.rejected && (
+                                <span className="text-xs text-gray-500">on {request.rejected}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {proofUrl && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedProofImage(proofUrl);
+                                    setisProofModalOpen(true);
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                                  title="View Submitted Proof"
+                                >
+                                  <ImageIcon className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(request)}
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                                title="Delete Request"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                    {request.status === "rejected" && (
-                      <div className="flex flex-col items-end gap-3 w-full">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="px-4 py-1.5 bg-red-500/10 text-red-500 text-xs font-bold rounded-full flex items-center gap-1.5 border border-red-500/20">
-                            <XIcon className="w-3 h-3" />
-                            REJECTED
-                          </span>
-                          {request.rejected && (
-                            <span className="text-xs text-gray-500">on {request.rejected}</span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handleDelete(request)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
-                          title="Delete Request"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    );
+                  })()}
                 </div>
               </motion.div>
             );

@@ -4,6 +4,7 @@ export enum Collections {
   UPLOAD_HISTORY = "uploadHistory",
 }
 
+export const PASS_HOURS = 75;
 export const TOTAL_WORK_HOURS = 90;
 
 export const WORK_TYPES: Record<string, string[]> = {

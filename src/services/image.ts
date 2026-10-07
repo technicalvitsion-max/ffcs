@@ -1,5 +1,4 @@
-import { compressImage } from "@/lib/compressImage";
-import { supabase } from "@/lib/supabase";
+import { compressImageToDataUrl } from "@/lib/compressImage";
 
 export class ImageService {
   static async uploadImage(
@@ -7,41 +6,19 @@ export class ImageService {
     requestId: string
   ): Promise<{ url: string; path: string }> {
     try {
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${requestId}.${fileExt}`;
-      const compressedImage = await compressImage(file);
-      const { error } = await supabase.storage
-        .from("requests")
-        .upload(filePath, compressedImage, {
-          upsert: false,
-        });
-
-      if (error) throw error;
-
-      // get public url
-      const { data } = supabase.storage
-        .from("requests")
-        .getPublicUrl(filePath);
+      const dataUrl = await compressImageToDataUrl(file);
 
       return {
-        url: data.publicUrl,
-        path: filePath,
+        url: dataUrl,
+        path: `proofs/${requestId}.jpg`,
       };
     } catch (error) {
-      console.log(error);
-      throw "Could not upload image. Please try again later";
+      console.error("Image processing error:", error);
+      throw "Could not process image proof. Please try again with a valid photo.";
     }
   }
 
-  static async deleteImage(path: string) {
-    try {
-      const { error } = await supabase.storage.from("requests").remove([path]);
-
-      if (error) throw error;
-
-      return null;
-    } catch {
-      throw "Something went wrong. Please try again later";
-    }
+  static async deleteImage(_path: string) {
+    return null;
   }
 }

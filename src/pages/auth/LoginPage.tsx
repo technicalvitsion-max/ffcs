@@ -4,6 +4,7 @@ import { AuthService } from "@/services/auth";
 import { LockIcon, LogInIcon, UserIcon } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import ForgotPasswordModal from "@/components/common/ForgotPasswordModal";
 
 const LoginPage = () => {
   const { setLoading, isLoading } = useLoader() as LoaderContextType;
@@ -11,6 +12,7 @@ const LoginPage = () => {
 
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +79,16 @@ const LoginPage = () => {
               />
             </div>
 
+            <div className="flex justify-end pr-1">
+              <button
+                type="button"
+                onClick={() => setIsForgotOpen(true)}
+                className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading}
@@ -98,7 +110,12 @@ const LoginPage = () => {
           © {new Date().getFullYear()} VITSION Club. Internal Access Only.
         </p>
       </motion.div>
-    </div >
+
+      <ForgotPasswordModal
+        isOpen={isForgotOpen}
+        onClose={() => setIsForgotOpen(false)}
+      />
+    </div>
   );
 };
 

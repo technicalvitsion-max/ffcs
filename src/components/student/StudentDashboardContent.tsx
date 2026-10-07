@@ -1,12 +1,14 @@
 "use client";
-import { type HourRequest } from "@/lib/types";
-import { PlusIcon, UserIcon, GraduationCapIcon, FileSpreadsheetIcon } from "lucide-react";
+import { type HourRequest, type Student } from "@/lib/types";
+import { PlusIcon, UserIcon, GraduationCapIcon, FileSpreadsheetIcon, FileTextIcon } from "lucide-react";
 import HoursSummary from "@/components/student/HoursSummaryComponent";
 import WorkHistoryTable from "@/components/student/WorkHistoryTable";
 import { useAuth, type AuthContextType } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import * as XLSX from "xlsx";
+import { PDFReportService } from "@/services/pdfReport";
+
 
 type Props = {
   totalHours: number;
@@ -47,6 +49,19 @@ export default function StudentDashboardContent({
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Approved Hours");
     XLSX.writeFile(workbook, "Approved_Work_History.xlsx");
+  };
+
+  const handleDownloadPDF = () => {
+    if (!user) return;
+    const studentData: Student = {
+      id: user.id || user.registrationNumber || "",
+      name: user.name || "",
+      registrationNumber: user.registrationNumber || "",
+      email: user.email || "",
+      mobile: user.mobile || "",
+      hours: totalHours,
+    };
+    PDFReportService.generateStudentReport(studentData, hourRequests);
   };
 
   return (
@@ -116,15 +131,24 @@ export default function StudentDashboardContent({
                 Track the status of your submissions
               </p>
             </div>
-            {hourRequests.some((req) => req.status === "approved") && (
+            <div className="flex flex-wrap items-center gap-3">
               <button
-                onClick={handleDownloadExcel}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#0a0a0a] border border-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/5 transition-colors group"
+                onClick={handleDownloadPDF}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors shadow-sm"
               >
-                <FileSpreadsheetIcon className="w-4 h-4 text-green-500 group-hover:text-green-400 transition-colors" />
-                Download Excel
+                <FileTextIcon className="w-4 h-4 text-black" />
+                Download PDF Report
               </button>
-            )}
+              {hourRequests.some((req) => req.status === "approved") && (
+                <button
+                  onClick={handleDownloadExcel}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#0a0a0a] border border-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/5 transition-colors group"
+                >
+                  <FileSpreadsheetIcon className="w-4 h-4 text-green-500 group-hover:text-green-400 transition-colors" />
+                  Download Excel
+                </button>
+              )}
+            </div>
           </div>
 
           <WorkHistoryTable data={hourRequests} />

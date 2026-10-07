@@ -25,26 +25,70 @@ const NewRequestForm = () => {
 
   const [date, setDate] = useState("");
   const [hours, setHours] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const navigate = useNavigate();
 
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      showAlert("Please upload a valid image file (PNG, JPG, JPEG)", AlertType.DANGER);
+      return;
+    }
+    setSelectedFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setFileName(event.target.files[0].name);
-    } else {
-      setFileName("");
+      handleFileSelect(event.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
   const handleSubmit = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    setLoading(true, "Submitting request");
     event.preventDefault();
-    let file = null;
-    if (fileInputRef.current && fileInputRef.current.files?.length) {
-      file = fileInputRef.current.files[0];
+
+    if (!workName.trim() || !workSlab || !workType || !date || !hours) {
+      showAlert("Please fill in all required work details", AlertType.DANGER);
+      return;
     }
+
+    if (!selectedFile) {
+      showAlert("Proof of work photograph is mandatory", AlertType.DANGER);
+      return;
+    }
+
+    setLoading(true, "Compressing & uploading proof...");
 
     const formData: HourRequestInput = {
       workName,
@@ -53,30 +97,28 @@ const NewRequestForm = () => {
       description,
       date,
       hours: Number(hours),
-      file,
+      file: selectedFile,
     };
-    console.log("Submitting new request:", formData);
+
     try {
       await RequestsService.submitNewRequest(formData, user!);
 
-      showAlert("Request submitted successfully", AlertType.SUCCESS);
+      showAlert("Request and proof submitted successfully!", AlertType.SUCCESS);
       setWorkName("");
       setWorkType("");
       setWorkSlab("");
       setDescription("");
       setDate("");
       setHours("");
-      setFileName("");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      handleRemoveFile();
       setTimeout(() => {
         navigate("/dashboard");
-      }, 2500);
+      }, 2000);
     } catch (error) {
-      showAlert(error as string);
+      showAlert(typeof error === "string" ? error : "Failed to submit request");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -256,60 +298,101 @@ const NewRequestForm = () => {
 
             {/* File Input */}
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                Proof of Work (Geotag photo)
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-300">
+                  Proof of Work (Geotag photo) <span className="text-red-400">*</span>
+                </label>
+                {selectedFile && (
+                  <span className="text-xs text-green-400 font-medium flex items-center gap-1">
+                    <CheckCircleIcon className="w-3.5 h-3.5" />
+                    Photo attached
+                  </span>
+                )}
+              </div>
+
+              <input
+                id="file-upload"
+                name="file-upload"
+                type="file"
+                className="sr-only"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+              />
+
               <div
-                className={`mt-1 flex justify-center p-8 border-2 border-dashed rounded-xl transition-all duration-200 ${fileName ? "border-green-500/50 bg-green-500/10" : "border-white/10 hover:border-white/30 hover:bg-white/5"
-                  }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => {
+                  if (!selectedFile && fileInputRef.current) {
+                    fileInputRef.current.click();
+                  }
+                }}
+                className={`mt-1 flex justify-center p-6 sm:p-8 border-2 border-dashed rounded-2xl transition-all duration-200 cursor-pointer ${
+                  selectedFile
+                    ? "border-green-500/40 bg-green-500/5 cursor-default"
+                    : isDragging
+                    ? "border-white bg-white/10 scale-[1.01]"
+                    : "border-white/10 hover:border-white/30 hover:bg-white/5"
+                }`}
               >
-                <div className="space-y-2 text-center">
-                  {fileName ? (
-                    <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mb-2">
-                        <CheckCircleIcon className="w-6 h-6" />
+                {selectedFile && previewUrl ? (
+                  <div className="flex flex-col sm:flex-row items-center gap-5 w-full">
+                    <div className="relative group">
+                      <img
+                        src={previewUrl}
+                        alt="Proof Preview"
+                        className="w-28 h-28 object-cover rounded-xl border border-white/20 shadow-lg"
+                      />
+                      <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none">
+                        <span className="text-[10px] text-white font-bold uppercase tracking-wider">Preview</span>
                       </div>
-                      <p className="text-sm font-medium text-white">{fileName}</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFileName("");
-                          if (fileInputRef.current) fileInputRef.current.value = "";
-                        }}
-                        className="text-xs text-red-400 hover:text-red-300 mt-1 font-medium transition-colors"
-                      >
-                        Remove file
-                      </button>
                     </div>
-                  ) : (
-                    <>
-                      <div className="mx-auto w-12 h-12 bg-white/10 text-white rounded-full flex items-center justify-center mb-2">
-                        <UploadIcon className="h-6 w-6" />
-                      </div>
-                      <div className="flex flex-col sm:flex-row text-sm text-gray-400 items-center justify-center gap-1">
-                        <label
-                          htmlFor="file-upload"
-                          className="relative cursor-pointer font-bold text-white hover:text-gray-200 focus-within:outline-none transition-colors"
-                        >
-                          <span>Upload a file</span>
-                          <input
-                            id="file-upload"
-                            name="file-upload"
-                            type="file"
-                            className="sr-only"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept="image/*"
-                          />
-                        </label>
-                        <p className="text-gray-500">or drag and drop</p>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        PNG, JPG, GIF up to 10MB
+                    <div className="flex-1 text-center sm:text-left space-y-1">
+                      <p className="text-sm font-bold text-white break-all">{selectedFile.name}</p>
+                      <p className="text-xs text-gray-400">
+                        Size: {(selectedFile.size / 1024).toFixed(1)} KB • Image ready for upload
                       </p>
-                    </>
-                  )}
-                </div>
+                      <div className="pt-2 flex items-center justify-center sm:justify-start gap-3">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
+                          className="text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors"
+                        >
+                          Change photo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFile();
+                          }}
+                          className="text-xs px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg font-semibold transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 text-center">
+                    <div className="mx-auto w-12 h-12 bg-white/10 text-white rounded-full flex items-center justify-center mb-1">
+                      <UploadIcon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        Click to select photo <span className="font-normal text-gray-400">or drag and drop</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Upload your geotag photo or event proof (PNG, JPG, JPEG)
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

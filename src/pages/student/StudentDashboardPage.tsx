@@ -2,7 +2,6 @@ import Navbar from "@/components/common/Navbar";
 import StudentsPageContent from "@/components/student/StudentDashboardContent";
 import { useAuth, type AuthContextType } from "@/context/AuthContext";
 import { useError, type ErrorContextType } from "@/context/ErrorContext";
-import { TOTAL_WORK_HOURS } from "@/lib/constants";
 import { type HourRequest } from "@/lib/types";
 import { RequestsService } from "@/services/requests";
 import { StudentsService } from "@/services/students";
@@ -35,10 +34,10 @@ function StudentsDashboard() {
         <StudentsPageContent
           hourRequests={hourRequests}
           totalHours={completedHours}
-          remainingHours={TOTAL_WORK_HOURS - completedHours}
+          remainingHours={Math.max(0, 75 - completedHours)}
           progressPercentage={Math.min(
             100,
-            (completedHours / TOTAL_WORK_HOURS) * 100
+            (completedHours / 90) * 100
           )}
         />
       </div>

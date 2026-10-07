@@ -14,7 +14,7 @@ export default function AdminViewContextProvider({
 }: {
   children: ReactNode;
 }) {
-  const [view, setView] = useState("requests");
+  const [view, setView] = useState("overview");
   return (
     <AdminViewContext.Provider value={{ view, setView }}>
       {children}

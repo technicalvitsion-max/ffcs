@@ -4,7 +4,6 @@ import type { Student, User } from "@/lib/types";
 import {
   collection as firebaseCollection,
   getDocs,
-  orderBy,
   query,
   where,
 } from "firebase/firestore";
@@ -14,17 +13,21 @@ export class StudentsService {
 
   static async getAllStudents(): Promise<Partial<Student>[]> {
     try {
-      const res = (
-        await getDocs(
-          query(this.studentsCollection, orderBy("hours", "desc"))
-        )
-      ).docs;
-      return res.map((doc) => {
-        const { id, name, registrationNumber, hours } =
-          doc.data() as Partial<Student>;
-        return { id, name, registrationNumber, hours };
+      const snap = await getDocs(this.studentsCollection);
+      const list = snap.docs.map((doc) => {
+        const data = doc.data() as Partial<Student>;
+        return {
+          id: data.id || doc.id,
+          name: data.name || "",
+          registrationNumber: data.registrationNumber || "",
+          hours: data.hours ?? 0,
+          email: data.email || "",
+          mobile: data.mobile || "",
+        };
       });
-    } catch {
+      return list.sort((a, b) => (b.hours ?? 0) - (a.hours ?? 0));
+    } catch (err) {
+      console.error("Firestore getAllStudents error:", err);
       throw "Could not fetch students list";
     }
   }

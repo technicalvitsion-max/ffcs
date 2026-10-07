@@ -30,6 +30,13 @@ export class RequestsService {
   ): Promise<{ success: boolean }> {
     try {
       const date = new Date();
+      let proofData = null;
+
+      if (formData.file) {
+        const tempId = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        proofData = await ImageService.uploadImage(formData.file, tempId);
+      }
+
       const obj = {
         workName: formData.workName,
         workSlab: formData.workSlab,
@@ -38,26 +45,19 @@ export class RequestsService {
         description: formData.description,
         hours: formData.hours,
         status: "pending",
-        proof: null,
+        proof: proofData,
         name: user.name,
         registrationNumber: user.registrationNumber,
         submitted: date.toISOString().split("T")[0],
       };
 
-      // const res = await db.collection(Collections.HOUR_REQUESTS).add(obj);
-      const res = await addDoc(this.collection, obj);
-      if (formData.file) {
-        const uploadResult = await ImageService.uploadImage(
-          formData.file,
-          res.id
-        );
-        await updateDoc(doc(db, Collections.HOUR_REQUESTS, res.id), {
-          proof: uploadResult,
-        });
-      }
+      await addDoc(this.collection, obj);
       return { success: true };
-    } catch {
-      throw "The request could not be submitted. Please try again later";
+    } catch (error) {
+      console.error("Submit request error:", error);
+      throw typeof error === "string"
+        ? error
+        : "The request could not be submitted. Please try again later";
     }
   }
 

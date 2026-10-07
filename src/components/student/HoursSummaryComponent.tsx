@@ -25,13 +25,17 @@ export default function HoursSummary({
           </div>
           <span>Progress Overview</span>
         </h3>
-        {remainingHours <= 0 && (
+        {totalHours >= 75 && (
           <motion.span
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="px-4 py-1.5 bg-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wide rounded-full flex items-center gap-2 border border-green-500/20"
+            className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wide rounded-full flex items-center gap-2 border ${
+              totalHours >= 90
+                ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                : "bg-green-500/20 text-green-400 border-green-500/20"
+            }`}
           >
-            <CheckCircleIcon size={14} /> Target Met
+            <CheckCircleIcon size={14} /> {totalHours >= 90 ? "100% Completed" : "Passed (≥75h)"}
           </motion.span>
         )}
       </div>
