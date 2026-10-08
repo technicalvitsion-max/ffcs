@@ -11,6 +11,7 @@ import { ArrowLeftIcon, UploadIcon, FileIcon, CheckCircleIcon } from "lucide-rea
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { DatePicker } from "@/components/common/DatePicker";
 
 const NewRequestForm = () => {
   const { user } = useAuth() as AuthContextType;
@@ -267,12 +268,10 @@ const NewRequestForm = () => {
                 >
                   Date of Work
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   id="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white text-white color-scheme-dark transition-all"
+                  onChange={(selectedDate) => setDate(selectedDate)}
                   required
                 />
               </div>
