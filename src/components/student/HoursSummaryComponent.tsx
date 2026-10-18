@@ -16,7 +16,7 @@ export default function HoursSummary({
   return (
     <div className="bg-[#121212] p-8 rounded-[2rem] mb-8 border border-white/10 shadow-xl relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
       <div className="flex items-center justify-between mb-8 relative z-10">
         <h3 className="text-xl font-bold text-white flex items-center gap-3">
@@ -31,11 +31,11 @@ export default function HoursSummary({
             animate={{ scale: 1, opacity: 1 }}
             className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wide rounded-full flex items-center gap-2 border ${
               totalHours >= 90
-                ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-                : "bg-green-500/20 text-green-400 border-green-500/20"
+                ? "bg-white/10 text-white border-white/20"
+                : "bg-white/10 text-gray-200 border-white/10"
             }`}
           >
-            <CheckCircleIcon size={14} /> {totalHours >= 90 ? "100% Completed" : "Passed (≥75h)"}
+            <CheckCircleIcon size={14} className="text-gray-400" /> {totalHours >= 90 ? "100% Completed" : "Passed (≥75h)"}
           </motion.span>
         )}
       </div>
@@ -78,10 +78,7 @@ export default function HoursSummary({
           <div className="flex-1 p-6 bg-black/40 rounded-2xl border border-white/5 hover:border-white/20 transition-all duration-300 group">
             <p className="text-sm text-gray-500 font-medium mb-1 group-hover:text-gray-300 transition-colors">Remaining</p>
             <div className="flex items-baseline gap-2">
-              <span
-                className={`text-5xl font-black tracking-tight leading-none ${remainingHours > 0 ? "text-white" : "text-green-400"
-                  }`}
-              >
+              <span className="text-5xl font-black tracking-tight leading-none text-white">
                 {Math.max(0, remainingHours)}
               </span>
               <span className="text-sm text-gray-400 font-medium">

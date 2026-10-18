@@ -19,31 +19,31 @@ const MARKING_SCHEME = {
         ],
         content: [
             { activity: "Content ideas (Posts/Reels)", hours: 2 },
-            { activity: "Taking MoM for meetings", hours: 2 },
+            { activity: "Taking MoM for meetings", hours: 1 },
         ],
         design: [{ activity: "Creating poster/insta post designs", hours: 4 }],
         editing: [
-            { activity: "Promo edits", hours: 2 },
-            { activity: "Marketing reel edits", hours: 2 },
-            { activity: "Aftermovies", hours: 2 },
-            { activity: "Fan Edits", hours: 2 },
+            { activity: "Promo edits", hours: 4 },
+            { activity: "Marketing reel edits", hours: 4 },
+            { activity: "Aftermovies", hours: 4 },
+            { activity: "Fan Edits", hours: 4 },
         ],
         event_management: [
-            { activity: "Pitching Event Ideas", hours: 2 },
+            { activity: "Pitching Event Ideas", hours: 1 },
             { activity: "Event coordinator", hours: 4 },
-            { activity: "Other volunteering", hours: 2 },
+            { activity: "Other volunteering", hours: 3 },
         ],
         marketing: [
             { activity: "Desk Marketing", hours: "Duration based" },
             { activity: "Proposing Reel ideas", hours: 2 },
         ],
         photography: [
-            { activity: "Event photographer", hours: 4 },
+            { activity: "Event photographer", hours: "Duration based" },
             { activity: "Reel shoot", hours: 2 },
         ],
         social_media: [
-            { activity: "Content for weekly posts", hours: 2 },
-            { activity: "Providing ideas for posts", hours: 2 },
+            { activity: "Content for weekly posts", hours: 1 },
+            { activity: "Providing ideas for posts", hours: 1 },
         ],
     },
     creative_contributions: {
@@ -84,7 +84,7 @@ export default function LandingPage() {
                     >
                         {/* Abstract blobs for subtle depth */}
                         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 blur-[120px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
-                        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-900/20 blur-[100px] rounded-full pointer-events-none translate-y-1/2 -translate-x-1/4"></div>
+                        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-white/5 blur-[100px] rounded-full pointer-events-none translate-y-1/2 -translate-x-1/4"></div>
 
                         <div className="relative z-10 max-w-4xl">
                             <motion.div
@@ -93,7 +93,7 @@ export default function LandingPage() {
                                 transition={{ delay: 0.2 }}
                                 className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white text-sm font-medium mb-10"
                             >
-                                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
                                 Official Hours Tracking Portal
                             </motion.div>
 
@@ -137,7 +137,7 @@ export default function LandingPage() {
                                     onClick={() => setIsForgotOpen(true)}
                                     className="px-8 py-5 bg-white/5 text-gray-300 hover:text-white border border-white/10 rounded-full font-semibold text-base hover:bg-white/10 transition-all backdrop-blur-sm flex items-center gap-2"
                                 >
-                                    <KeyRoundIcon className="w-4 h-4 text-indigo-400" />
+                                    <KeyRoundIcon className="w-4 h-4 text-gray-300" />
                                     Forgot Password?
                                 </button>
                                 <a
@@ -181,13 +181,23 @@ export default function LandingPage() {
                         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 blur-[120px] rounded-full pointer-events-none translate-x-1/3 -translate-y-1/2"></div>
 
                         <div className="relative z-10">
-                            <div className="text-center mb-16">
+                            <div className="text-center mb-10">
                                 <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
                                     MARKING SCHEME
                                 </h2>
                                 <p className="text-gray-400 text-xl max-w-2xl mx-auto font-light">
                                     Choose your path to earn credits. Whether you're on screen, behind
                                     the camera, or managing the chaos.
+                                </p>
+                            </div>
+
+                            {/* Disclaimer Banner without emoji */}
+                            <div className="max-w-3xl mx-auto mb-12 p-6 rounded-2xl bg-white/[0.04] border border-white/10 text-center">
+                                <p className="text-xs uppercase font-mono tracking-widest text-gray-400 mb-1">
+                                    Important Disclaimer
+                                </p>
+                                <p className="text-sm md:text-base text-gray-200 font-medium leading-relaxed">
+                                    The hours you requested will be only provided if your work is satisfied. If not satisfied, we will decrease the hours for that particular request.
                                 </p>
                             </div>
 
@@ -300,7 +310,7 @@ export default function LandingPage() {
                                     >
                                         <div className="bg-white/5 p-10 md:p-14 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
                                             {/* Decorative blobs */}
-                                            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+                                            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 blur-[100px] rounded-full pointer-events-none"></div>
 
                                             <div className="relative z-10">
                                                 <div className="text-center mb-14">

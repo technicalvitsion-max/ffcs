@@ -80,13 +80,13 @@ function StudentViewPage() {
               <div className="flex items-center gap-3">
                 <h2 className="text-3xl font-black text-white tracking-tight">{student.name}</h2>
                 {isPassed ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-400 border border-green-500/20">
-                    <CheckCircle2Icon className="w-3.5 h-3.5" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20">
+                    <CheckCircle2Icon className="w-3.5 h-3.5 text-gray-400" />
                     PASSED (≥ {PASS_HOURS}h)
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                    <AlertCircleIcon className="w-3.5 h-3.5" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/5 text-gray-300 border border-white/10">
+                    <AlertCircleIcon className="w-3.5 h-3.5 text-gray-400" />
                     IN PROGRESS ({PASS_HOURS - (student.hours || 0)}h to pass)
                   </span>
                 )}
@@ -117,8 +117,8 @@ function StudentViewPage() {
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   isPassed
-                    ? "bg-gradient-to-r from-green-500 to-emerald-400"
-                    : "bg-gradient-to-r from-amber-500 to-orange-400"
+                    ? "bg-white"
+                    : "bg-gray-400"
                 }`}
                 style={{ width: `${progressPct}%` }}
               ></div>

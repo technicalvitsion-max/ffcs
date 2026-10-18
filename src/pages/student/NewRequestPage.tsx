@@ -156,6 +156,12 @@ const NewRequestForm = () => {
           </div>
 
           <form className="p-6 sm:p-8 space-y-6 relative z-10">
+            {/* Notice / Disclaimer */}
+            <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl text-xs text-gray-300 leading-relaxed">
+              <span className="font-bold text-white block mb-0.5">Important Notice:</span>
+              The hours you requested will be only provided if your work is satisfied. If not satisfied, we will decrease the hours for that particular request.
+            </div>
+
             {/* Work Name */}
             <div>
               <label

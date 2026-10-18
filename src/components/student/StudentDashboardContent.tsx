@@ -104,6 +104,21 @@ export default function StudentDashboardContent({
           </div>
         </motion.div>
 
+        {/* Policy Disclaimer Banner without emoji */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05 }}
+          className="bg-[#121212] p-6 rounded-2xl border border-white/10 shadow-lg"
+        >
+          <span className="text-xs uppercase font-mono tracking-wider text-gray-400 block mb-1.5 font-bold">
+            Important Notice
+          </span>
+          <p className="text-sm md:text-base text-gray-200 leading-relaxed font-medium">
+            The hours you requested will be only provided if your work is satisfied. If not satisfied, we will decrease the hours for that particular request.
+          </p>
+        </motion.div>
+
         {/* Summary Stats */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -144,7 +159,7 @@ export default function StudentDashboardContent({
                   onClick={handleDownloadExcel}
                   className="flex items-center gap-2 px-5 py-2.5 bg-[#0a0a0a] border border-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/5 transition-colors group"
                 >
-                  <FileSpreadsheetIcon className="w-4 h-4 text-green-500 group-hover:text-green-400 transition-colors" />
+                  <FileSpreadsheetIcon className="w-4 h-4 text-gray-300 group-hover:text-white transition-colors" />
                   Download Excel
                 </button>
               )}

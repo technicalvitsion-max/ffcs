@@ -99,7 +99,7 @@ function StudentsTable({ students }: { students: Partial<Student>[] }) {
               disabled={filteredAndSorted.length === 0}
               className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 text-xs font-bold rounded-xl transition-all disabled:opacity-50"
             >
-              <DownloadIcon className="w-4 h-4 text-emerald-400" />
+              <DownloadIcon className="w-4 h-4 text-gray-300" />
               Export to Excel
             </button>
           </div>
@@ -123,7 +123,7 @@ function StudentsTable({ students }: { students: Partial<Student>[] }) {
               onClick={() => setFilterType("passed")}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 filterType === "passed"
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                  ? "bg-white text-black shadow-sm"
                   : "bg-white/5 text-gray-400 hover:text-white"
               }`}
             >
@@ -133,7 +133,7 @@ function StudentsTable({ students }: { students: Partial<Student>[] }) {
               onClick={() => setFilterType("full")}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 filterType === "full"
-                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                  ? "bg-white text-black shadow-sm"
                   : "bg-white/5 text-gray-400 hover:text-white"
               }`}
             >
@@ -143,17 +143,17 @@ function StudentsTable({ students }: { students: Partial<Student>[] }) {
               onClick={() => setFilterType("fail")}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 filterType === "fail"
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                  ? "bg-white text-black shadow-sm"
                   : "bg-white/5 text-gray-400 hover:text-white"
               }`}
             >
-              Fail / Under 75h ({countFail})
+              Under 75h ({countFail})
             </button>
             <button
               onClick={() => setFilterType("zero")}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 filterType === "zero"
-                  ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                  ? "bg-white text-black shadow-sm"
                   : "bg-white/5 text-gray-400 hover:text-white"
               }`}
             >
@@ -263,17 +263,17 @@ function StudentsTable({ students }: { students: Partial<Student>[] }) {
                     <td className="px-6 py-4 whitespace-nowrap min-w-[180px]">
                       <div className="w-full">
                         <div className="flex justify-between items-center text-[11px] mb-1 font-mono">
-                          <span className={isPassed ? "text-emerald-400 font-bold" : "text-gray-400"}>
+                          <span className={isPassed ? "text-white font-bold" : "text-gray-400"}>
                             {hours} / 90 hrs
                           </span>
-                          <span className={isPassed ? "text-emerald-400 font-bold" : "text-gray-500"}>
+                          <span className={isPassed ? "text-white font-bold" : "text-gray-500"}>
                             {percentage}%
                           </span>
                         </div>
                         <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-300 ${
-                              isFull ? "bg-purple-400" : isPassed ? "bg-emerald-400" : percentage >= 50 ? "bg-amber-400" : "bg-white/30"
+                              isFull ? "bg-white" : isPassed ? "bg-gray-300" : percentage >= 50 ? "bg-gray-400" : "bg-gray-600"
                             }`}
                             style={{ width: `${percentage}%` }}
                           />
@@ -282,21 +282,21 @@ function StudentsTable({ students }: { students: Partial<Student>[] }) {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {isFull ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                          🏆 {hours}h (100% GOAL)
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20">
+                          {hours}h (100% GOAL)
                         </span>
                       ) : isPassed ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle2Icon className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-gray-200 border border-white/10">
+                          <CheckCircle2Icon className="w-3.5 h-3.5 text-gray-400" />
                           {hours}h (PASSED)
                         </span>
                       ) : hours > 0 ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                          FAIL (Need {75 - hours}h)
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/5 text-gray-400 border border-white/10">
+                          Need {75 - hours}h
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/5 text-gray-500 border border-white/5">
-                          0h (FAIL / 0%)
+                          0h (0%)
                         </span>
                       )}
                     </td>
