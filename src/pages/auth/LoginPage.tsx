@@ -1,7 +1,7 @@
 import { useAlert, type AlertContextType } from "@/context/AlertContext";
 import { useLoader, type LoaderContextType } from "@/context/LoaderContext";
 import { AuthService } from "@/services/auth";
-import { LockIcon, LogInIcon, UserIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, LockIcon, LogInIcon, UserIcon } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import ForgotPasswordModal from "@/components/common/ForgotPasswordModal";
@@ -12,6 +12,7 @@ const LoginPage = () => {
 
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,15 +69,27 @@ const LoginPage = () => {
             </div>
 
             <div className="relative">
-              <LockIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+              <LockIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5 pointer-events-none" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-black/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-white/20 focus:border-white text-white placeholder-gray-600 outline-none transition-all"
+                className="w-full pl-12 pr-12 py-4 bg-black/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-white/20 focus:border-white text-white placeholder-gray-600 outline-none transition-all"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 focus:outline-none transition-colors p-1"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOffIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
             </div>
 
             <div className="flex justify-end pr-1">
