@@ -39,6 +39,7 @@ export interface HourRequest {
   submitted: string;
   approved?: string;
   rejected?: string;
+  remark?: string;
 }
 export interface HourRequestInput {
   workName: string;

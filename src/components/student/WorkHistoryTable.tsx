@@ -1,5 +1,5 @@
 import type { HourRequest } from "@/lib/types";
-import { ClockIcon, CalendarIcon, ImageIcon } from "lucide-react";
+import { ClockIcon, CalendarIcon, ImageIcon, MessageSquareIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ProofImageModal } from "../admin/ProofImageModal";
@@ -96,6 +96,12 @@ export default function WorkHistoryTable({ data }: { data: HourRequest[] }) {
                       <div className="font-bold text-white group-hover:text-gray-300 transition-colors">
                         {work.workName}
                       </div>
+                      {work.remark && (
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-400 font-medium max-w-xs truncate">
+                          <MessageSquareIcon className="w-3 h-3 shrink-0" />
+                          <span title={work.remark}>Remark: {work.remark}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-gray-300 border border-white/5">

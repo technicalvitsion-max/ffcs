@@ -7,7 +7,6 @@ import { useError, type ErrorContextType } from "@/context/ErrorContext";
 import { useLoader, type LoaderContextType } from "@/context/LoaderContext";
 import { AlertType, type HourRequest } from "@/lib/types";
 import { RequestsService } from "@/services/requests";
-import { ImageService } from "@/services/image";
 import {
   ImageIcon,
   CheckIcon,
@@ -23,15 +22,17 @@ import {
   SlidersHorizontalIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  MessageSquareIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { EditRequestModal } from "./EditRequestModal";
+import { EditRequestModal, type EditRequestConfirmPayload } from "./EditRequestModal";
 
 type SortOption =
   | "submittedDesc"
   | "submittedAsc"
+  | "acceptedRecently"
   | "dateDesc"
   | "dateAsc"
   | "hoursDesc"
@@ -150,6 +151,16 @@ function RequestCardItem({
               {request.description}
             </p>
           </div>
+
+          {request.remark && (
+            <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs">
+              <MessageSquareIcon className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <span className="font-bold text-amber-300 mr-1.5">Admin Remark:</span>
+                <span className="text-gray-300 leading-relaxed whitespace-pre-wrap">{request.remark}</span>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 font-medium">
             <div className="flex items-center gap-1.5">
@@ -346,7 +357,8 @@ function RequestsList({
         (req.workName && req.workName.toLowerCase().includes(lower)) ||
         (req.workSlab && req.workSlab.toLowerCase().includes(lower)) ||
         (req.workType && req.workType.toLowerCase().includes(lower)) ||
-        (req.date && req.date.toLowerCase().includes(lower))
+        (req.date && req.date.toLowerCase().includes(lower)) ||
+        (req.remark && req.remark.toLowerCase().includes(lower))
       );
     });
   }, [requests, status, searchQuery]);
@@ -364,6 +376,11 @@ function RequestsList({
           const diff = parseDateMs(a.submitted) - parseDateMs(b.submitted);
           if (diff !== 0) return diff;
           return parseDateMs(a.date) - parseDateMs(b.date);
+        }
+        case "acceptedRecently": {
+          const diff = parseDateMs(b.approved) - parseDateMs(a.approved);
+          if (diff !== 0) return diff;
+          return parseDateMs(b.submitted) - parseDateMs(a.submitted);
         }
         case "dateDesc": {
           const diff = parseDateMs(b.date) - parseDateMs(a.date);
@@ -545,50 +562,34 @@ function RequestsList({
     setIsEditModalOpen(true);
   };
 
-  const handleModalConfirm = async (
-    hours: number,
-    newFile?: File | null,
-    removeProof?: boolean
-  ) => {
+  const handleModalConfirm = async (payload: EditRequestConfirmPayload) => {
     if (!selectedRequest) return;
     setIsEditModalOpen(false);
 
-    if (isApproving) {
-      setLoading(true, "Approving request...");
-      try {
-        let newProofData = undefined;
-        if (newFile) {
-          newProofData = await ImageService.uploadImage(newFile, selectedRequest.id);
-        }
-        await RequestsService.handleRequestAction(
-          selectedRequest.id,
-          "approved",
-          hours,
-          newProofData,
-          removeProof
-        );
-        showAlert("Request approved", AlertType.SUCCESS);
-        refreshRequests();
-      } catch (err) {
-        setError(err as string);
-      }
-      setLoading(false);
-    } else {
-      setLoading(true, "Updating request...");
-      try {
-        await RequestsService.updateApprovedRequest(
-          selectedRequest.id,
-          hours,
-          newFile,
-          removeProof
-        );
-        showAlert("Request updated", AlertType.SUCCESS);
-        refreshRequests();
-      } catch (err) {
-        setError(err as string);
-      }
-      setLoading(false);
+    setLoading(true, "Updating request...");
+    try {
+      await RequestsService.updateRequestDetails(selectedRequest.id, {
+        hours: payload.hours,
+        status: payload.status,
+        date: payload.date,
+        remark: payload.remark,
+        newProofFile: payload.newFile,
+        removeProof: payload.removeProof,
+      });
+
+      const actionMsg =
+        payload.status === "approved"
+          ? "Request approved & credited"
+          : payload.status === "rejected"
+            ? "Request marked as rejected"
+            : "Request saved as pending";
+
+      showAlert(actionMsg, AlertType.SUCCESS);
+      refreshRequests();
+    } catch (err) {
+      setError(err as string);
     }
+    setLoading(false);
     setSelectedRequest(null);
   };
 
@@ -701,6 +702,7 @@ function RequestsList({
               >
                 <option value="submittedDesc" className="bg-[#121212] text-white">Submitted: Newest First</option>
                 <option value="submittedAsc" className="bg-[#121212] text-white">Submitted: Oldest First (FIFO)</option>
+                <option value="acceptedRecently" className="bg-[#121212] text-white">Accepted Recently</option>
                 <option value="dateDesc" className="bg-[#121212] text-white">Work Date: Newest First</option>
                 <option value="dateAsc" className="bg-[#121212] text-white">Work Date: Oldest First</option>
                 <option value="hoursDesc" className="bg-[#121212] text-white">Hours: High to Low</option>
@@ -891,12 +893,15 @@ function RequestsList({
         onClose={() => setIsEditModalOpen(false)}
         onConfirm={handleModalConfirm}
         initialHours={selectedRequest?.hours || 0}
+        initialStatus={selectedRequest?.status || "pending"}
+        initialDate={selectedRequest?.date || ""}
+        initialRemark={selectedRequest?.remark || ""}
         initialProofUrl={
           typeof selectedRequest?.proof === "string"
             ? selectedRequest.proof
             : selectedRequest?.proof?.url || (selectedRequest as any)?.proofUrl || null
         }
-        title={isApproving ? "Approve Request" : "Edit Request & Proof"}
+        title={isApproving ? "Approve Request" : "Edit Request Details"}
         isApproving={isApproving}
       />
     </>

@@ -19,6 +19,7 @@ import {
   updateDoc,
   where,
   deleteDoc,
+  deleteField,
 } from "firebase/firestore";
 
 export class RequestsService {
@@ -109,132 +110,152 @@ export class RequestsService {
     }
   }
 
-  static async handleRequestAction(
+  /**
+   * Primary comprehensive method to update any request details:
+   * - changes hours
+   * - switches status (pending <-> approved <-> rejected)
+   * - updates work date
+   * - adds or edits admin remarks
+   * - replaces or removes proof image
+   * Automatically keeps student balance in exact sync.
+   */
+  static async updateRequestDetails(
     id: string,
-    action: string,
-    modifiedHours?: number,
-    newProofData?: { url: string; path: string } | null,
-    removeProof?: boolean
-  ) {
+    params: {
+      hours: number;
+      status: string;
+      date?: string;
+      remark?: string;
+      newProofFile?: File | null;
+      removeProof?: boolean;
+    }
+  ): Promise<{ success: boolean }> {
     try {
       const ref = doc(this.collection, id);
       const snap = await getDoc(ref);
 
       if (!snap.exists()) {
-        return { success: false, error: "Request not found" };
+        return { success: false, error: "Request not found" } as any;
       }
 
-      const { hours: originalHours, registrationNumber, proof } = snap.data();
-      const finalHours = modifiedHours ?? originalHours;
+      const currentData = snap.data();
+      const oldStatus = currentData.status || "pending";
+      const oldHours = currentData.hours ?? 0;
+      const registrationNumber = currentData.registrationNumber;
 
-      // 2. Update the request status
-      const date = new Date();
-      const formatted = date.toISOString().split("T")[0];
-      const newData: {
-        status: string;
-        approved?: string;
-        rejected?: string;
-        hours?: number;
-        proof?: { url: string; path: string } | null;
-      } = { status: action };
+      const newHours = params.hours;
+      const newStatus = params.status || oldStatus;
+      const todayFormatted = new Date().toISOString().split("T")[0];
 
-      if (modifiedHours !== undefined) {
-        newData.hours = modifiedHours;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: Record<string, any> = {
+        hours: newHours,
+        status: newStatus,
+      };
+
+      if (params.date !== undefined && params.date !== "") {
+        updateData.date = params.date;
       }
 
-      if (action === "approved") {
-        newData.approved = formatted;
-      } else if (action === "rejected") {
-        newData.rejected = formatted;
+      if (params.remark !== undefined) {
+        updateData.remark = params.remark.trim();
+      }
+
+      // Handle status timestamp transitions
+      if (newStatus === "approved") {
+        updateData.approved = currentData.approved || todayFormatted;
+        updateData.rejected = deleteField();
+      } else if (newStatus === "rejected") {
+        updateData.rejected = currentData.rejected || todayFormatted;
+        updateData.approved = deleteField();
+      } else if (newStatus === "pending") {
+        updateData.approved = deleteField();
+        updateData.rejected = deleteField();
       }
 
       // Handle proof replacement or removal
-      if (newProofData) {
-        newData.proof = newProofData;
-      } else if (removeProof) {
-        newData.proof = null;
+      if (params.newProofFile) {
+        const proofData = await ImageService.uploadImage(params.newProofFile, id);
+        updateData.proof = proofData;
+      } else if (params.removeProof) {
+        updateData.proof = null;
       }
 
-      await Promise.all([
-        updateDoc(ref, newData),
-        proof && ImageService.deleteImage(proof.path),
-      ]);
+      await updateDoc(ref, updateData);
 
-      // 3. If approved → increment hours for student
-      if (action === "approved") {
+      // Student hours synchronization
+      let balanceDiff = 0;
+      if (oldStatus === "approved" && newStatus === "approved") {
+        balanceDiff = newHours - oldHours;
+      } else if (oldStatus === "approved" && newStatus !== "approved") {
+        balanceDiff = -oldHours;
+      } else if (oldStatus !== "approved" && newStatus === "approved") {
+        balanceDiff = newHours;
+      } else {
+        // Between pending and rejected: balance is unaffected
+        balanceDiff = 0;
+      }
+
+      if (balanceDiff !== 0 && registrationNumber) {
         const studentQuery = query(
           this.studentsCollection,
           where("registrationNumber", "==", registrationNumber)
         );
-
         const studentSnap = await getDocs(studentQuery);
 
         if (!studentSnap.empty) {
           await updateDoc(studentSnap.docs[0].ref, {
-            hours: increment(finalHours),
+            hours: increment(balanceDiff),
           });
         }
       }
 
       return { success: true };
     } catch (error) {
-      console.log(error);
-      throw "Could not update request status";
+      console.error("Error updating request details:", error);
+      throw typeof error === "string" ? error : "Could not update request details";
     }
+  }
+
+  static async handleRequestAction(
+    id: string,
+    action: string,
+    modifiedHours?: number,
+    _newProofData?: { url: string; path: string } | null,
+    removeProof?: boolean,
+    remark?: string,
+    date?: string
+  ) {
+    const snap = await getDoc(doc(this.collection, id));
+    const hours = modifiedHours ?? (snap.exists() ? snap.data().hours ?? 0 : 0);
+    const existingDate = snap.exists() ? snap.data().date : undefined;
+    const existingRemark = snap.exists() ? snap.data().remark : undefined;
+
+    return this.updateRequestDetails(id, {
+      hours,
+      status: action,
+      date: date || existingDate,
+      remark: remark !== undefined ? remark : existingRemark,
+      removeProof,
+    });
   }
 
   static async updateApprovedRequest(
     id: string,
     newHours: number,
     newProofFile?: File | null,
-    removeProof?: boolean
+    removeProof?: boolean,
+    remark?: string,
+    date?: string
   ) {
-    try {
-      const ref = doc(this.collection, id);
-      const snap = await getDoc(ref);
-
-      if (!snap.exists()) {
-        return { success: false, error: "Request not found" };
-      }
-
-      const { hours: oldHours, registrationNumber } = snap.data();
-      const diff = newHours - oldHours;
-
-      // Update data object
-      const updateData: {
-        hours: number;
-        proof?: { url: string; path: string } | null;
-      } = { hours: newHours };
-
-      if (newProofFile) {
-        const proofData = await ImageService.uploadImage(newProofFile, id);
-        updateData.proof = proofData;
-      } else if (removeProof) {
-        updateData.proof = null;
-      }
-
-      await updateDoc(ref, updateData);
-
-      // Update student balance if hours changed
-      if (diff !== 0) {
-        const studentQuery = query(
-          this.studentsCollection,
-          where("registrationNumber", "==", registrationNumber)
-        );
-        const studentSnap = await getDocs(studentQuery);
-
-        if (!studentSnap.empty) {
-          await updateDoc(studentSnap.docs[0].ref, {
-            hours: increment(diff),
-          });
-        }
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.log(error);
-      throw "Could not update approved request";
-    }
+    return this.updateRequestDetails(id, {
+      hours: newHours,
+      status: "approved",
+      date,
+      remark,
+      newProofFile,
+      removeProof,
+    });
   }
 
   static async updateRequestProof(
