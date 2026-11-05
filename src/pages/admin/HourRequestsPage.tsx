@@ -2,15 +2,21 @@ import { useState, useEffect } from "react";
 import RequestsList from "../../components/admin/RequestsList";
 import { ProofImageModal } from "../../components/admin/ProofImageModal";
 import { useAuth, type AuthContextType } from "@/context/AuthContext";
+import { useAlert, type AlertContextType } from "@/context/AlertContext";
+import { useLoader, type LoaderContextType } from "@/context/LoaderContext";
 import { RequestsService } from "@/services/requests";
-import type { HourRequest } from "@/lib/types";
+import { AlertType, type HourRequest } from "@/lib/types";
 import { motion } from "framer-motion";
+import { SparklesIcon } from "lucide-react";
 
 function RequestsComponent() {
   const { user } = useAuth() as AuthContextType;
+  const { showAlert } = useAlert() as AlertContextType;
+  const { setLoading } = useLoader() as LoaderContextType;
   const [activeTab, setActiveTab] = useState("pending");
   const [isProofModalOpen, setisProofModalOpen] = useState(false);
   const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   const [allRequests, setAllRequests] = useState<HourRequest[]>([]);
 
@@ -27,6 +33,36 @@ function RequestsComponent() {
       RequestsService.getHourRequests(user)
         .then(setAllRequests)
         .catch(() => {});
+    }
+  };
+
+  const handleOptimizeProofs = async () => {
+    if (
+      !window.confirm(
+        "This will scan all stored requests in Cloud Firestore and compress any large legacy proof images down to ~30KB to save database bandwidth and storage.\n\nProceed?"
+      )
+    ) {
+      return;
+    }
+
+    setIsOptimizing(true);
+    setLoading(true, "Scanning and compressing old proof images...");
+    try {
+      const res = await RequestsService.compressOldRequestsProofs();
+      if (res.totalCompressed > 0) {
+        showAlert(
+          `Optimized ${res.totalCompressed} images! Saved ~${res.kbSaved} KB of Firestore storage.`,
+          AlertType.SUCCESS
+        );
+      } else {
+        showAlert("All images in the database are already compact and optimized!", AlertType.SUCCESS);
+      }
+      refreshCounts();
+    } catch (err) {
+      showAlert(typeof err === "string" ? err : "Failed to optimize proofs", AlertType.DANGER);
+    } finally {
+      setIsOptimizing(false);
+      setLoading(false);
     }
   };
 
@@ -60,6 +96,18 @@ function RequestsComponent() {
               <p className="text-gray-400 mt-1">
                 Review submissions, verify proof files, and manage approval status
               </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={handleOptimizeProofs}
+                disabled={isOptimizing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                title="Compress legacy proof photos stored in Firestore down to ~30KB"
+              >
+                <SparklesIcon className="w-4 h-4 text-amber-400" />
+                {isOptimizing ? "Compressing Images..." : "Optimize DB Images"}
+              </button>
             </div>
           </div>
 

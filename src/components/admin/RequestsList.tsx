@@ -7,6 +7,7 @@ import { useError, type ErrorContextType } from "@/context/ErrorContext";
 import { useLoader, type LoaderContextType } from "@/context/LoaderContext";
 import { AlertType, type HourRequest } from "@/lib/types";
 import { RequestsService } from "@/services/requests";
+import { ImageService } from "@/services/image";
 import {
   ImageIcon,
   CheckIcon,
@@ -276,6 +277,13 @@ function RequestCardItem({
                   </button>
                 )}
                 <button
+                  onClick={() => handleEditClick(request)}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                  title="Edit Request & Proof"
+                >
+                  <PencilIcon className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => handleDelete(request)}
                   className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors cursor-pointer"
                   title="Delete Request"
@@ -537,14 +545,28 @@ function RequestsList({
     setIsEditModalOpen(true);
   };
 
-  const handleModalConfirm = async (hours: number) => {
+  const handleModalConfirm = async (
+    hours: number,
+    newFile?: File | null,
+    removeProof?: boolean
+  ) => {
     if (!selectedRequest) return;
     setIsEditModalOpen(false);
 
     if (isApproving) {
       setLoading(true, "Approving request...");
       try {
-        await RequestsService.handleRequestAction(selectedRequest.id, "approved", hours);
+        let newProofData = undefined;
+        if (newFile) {
+          newProofData = await ImageService.uploadImage(newFile, selectedRequest.id);
+        }
+        await RequestsService.handleRequestAction(
+          selectedRequest.id,
+          "approved",
+          hours,
+          newProofData,
+          removeProof
+        );
         showAlert("Request approved", AlertType.SUCCESS);
         refreshRequests();
       } catch (err) {
@@ -552,9 +574,14 @@ function RequestsList({
       }
       setLoading(false);
     } else {
-      setLoading(true, "Updating hours...");
+      setLoading(true, "Updating request...");
       try {
-        await RequestsService.updateApprovedRequest(selectedRequest.id, hours);
+        await RequestsService.updateApprovedRequest(
+          selectedRequest.id,
+          hours,
+          newFile,
+          removeProof
+        );
         showAlert("Request updated", AlertType.SUCCESS);
         refreshRequests();
       } catch (err) {
@@ -864,7 +891,12 @@ function RequestsList({
         onClose={() => setIsEditModalOpen(false)}
         onConfirm={handleModalConfirm}
         initialHours={selectedRequest?.hours || 0}
-        title={isApproving ? "Approve Request" : "Edit Request Hours"}
+        initialProofUrl={
+          typeof selectedRequest?.proof === "string"
+            ? selectedRequest.proof
+            : selectedRequest?.proof?.url || (selectedRequest as any)?.proofUrl || null
+        }
+        title={isApproving ? "Approve Request" : "Edit Request & Proof"}
         isApproving={isApproving}
       />
     </>

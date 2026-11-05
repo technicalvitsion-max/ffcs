@@ -1,6 +1,7 @@
 import { Collections } from "@/lib/constants";
 import { db } from "@/lib/firebase";
 import { ImageService } from "./image";
+import { compressExistingDataUrl } from "@/lib/compressImage";
 import {
   Role,
   type HourRequest,
@@ -111,7 +112,9 @@ export class RequestsService {
   static async handleRequestAction(
     id: string,
     action: string,
-    modifiedHours?: number
+    modifiedHours?: number,
+    newProofData?: { url: string; path: string } | null,
+    removeProof?: boolean
   ) {
     try {
       const ref = doc(this.collection, id);
@@ -132,6 +135,7 @@ export class RequestsService {
         approved?: string;
         rejected?: string;
         hours?: number;
+        proof?: { url: string; path: string } | null;
       } = { status: action };
 
       if (modifiedHours !== undefined) {
@@ -142,6 +146,13 @@ export class RequestsService {
         newData.approved = formatted;
       } else if (action === "rejected") {
         newData.rejected = formatted;
+      }
+
+      // Handle proof replacement or removal
+      if (newProofData) {
+        newData.proof = newProofData;
+      } else if (removeProof) {
+        newData.proof = null;
       }
 
       await Promise.all([
@@ -172,7 +183,12 @@ export class RequestsService {
     }
   }
 
-  static async updateApprovedRequest(id: string, newHours: number) {
+  static async updateApprovedRequest(
+    id: string,
+    newHours: number,
+    newProofFile?: File | null,
+    removeProof?: boolean
+  ) {
     try {
       const ref = doc(this.collection, id);
       const snap = await getDoc(ref);
@@ -184,28 +200,106 @@ export class RequestsService {
       const { hours: oldHours, registrationNumber } = snap.data();
       const diff = newHours - oldHours;
 
-      if (diff === 0) return { success: true };
+      // Update data object
+      const updateData: {
+        hours: number;
+        proof?: { url: string; path: string } | null;
+      } = { hours: newHours };
 
-      // Update request
-      await updateDoc(ref, { hours: newHours });
+      if (newProofFile) {
+        const proofData = await ImageService.uploadImage(newProofFile, id);
+        updateData.proof = proofData;
+      } else if (removeProof) {
+        updateData.proof = null;
+      }
 
-      // Update student balance
-      const studentQuery = query(
-        this.studentsCollection,
-        where("registrationNumber", "==", registrationNumber)
-      );
-      const studentSnap = await getDocs(studentQuery);
+      await updateDoc(ref, updateData);
 
-      if (!studentSnap.empty) {
-        await updateDoc(studentSnap.docs[0].ref, {
-          hours: increment(diff),
-        });
+      // Update student balance if hours changed
+      if (diff !== 0) {
+        const studentQuery = query(
+          this.studentsCollection,
+          where("registrationNumber", "==", registrationNumber)
+        );
+        const studentSnap = await getDocs(studentQuery);
+
+        if (!studentSnap.empty) {
+          await updateDoc(studentSnap.docs[0].ref, {
+            hours: increment(diff),
+          });
+        }
       }
 
       return { success: true };
     } catch (error) {
       console.log(error);
       throw "Could not update approved request";
+    }
+  }
+
+  static async updateRequestProof(
+    id: string,
+    newFile: File
+  ): Promise<{ success: boolean; proofUrl: string }> {
+    const proofData = await ImageService.uploadImage(newFile, id);
+    const ref = doc(this.collection, id);
+    await updateDoc(ref, { proof: proofData });
+    return { success: true, proofUrl: proofData.url };
+  }
+
+  /**
+   * Scans all stored hour requests in Cloud Firestore and recompresses any heavy
+   * legacy Base64 images down to compact ~25KB - 40KB JPEGs.
+   */
+  static async compressOldRequestsProofs(): Promise<{
+    totalChecked: number;
+    totalCompressed: number;
+    kbSaved: number;
+  }> {
+    try {
+      const snap = await getDocs(this.collection);
+      let totalChecked = 0;
+      let totalCompressed = 0;
+      let kbSaved = 0;
+
+      for (const docSnap of snap.docs) {
+        totalChecked++;
+        const data = docSnap.data();
+        const proofUrl =
+          typeof data.proof === "string" ? data.proof : data.proof?.url;
+
+        if (
+          proofUrl &&
+          typeof proofUrl === "string" &&
+          proofUrl.startsWith("data:image/")
+        ) {
+          const oldLength = proofUrl.length;
+          // If larger than ~50KB in base64 string length
+          if (oldLength > 50 * 1024) {
+            try {
+              const compressedUrl = await compressExistingDataUrl(proofUrl);
+              const newLength = compressedUrl.length;
+              if (newLength < oldLength) {
+                await updateDoc(docSnap.ref, {
+                  proof: {
+                    url: compressedUrl,
+                    path: data.proof?.path || `proofs/${docSnap.id}.jpg`,
+                  },
+                });
+                totalCompressed++;
+                kbSaved += Math.round((oldLength - newLength) / 1024);
+              }
+            } catch (e) {
+              console.warn(`Could not compress proof for doc ${docSnap.id}:`, e);
+            }
+          }
+        }
+      }
+
+      return { totalChecked, totalCompressed, kbSaved };
+    } catch (error) {
+      console.error("Batch compression error:", error);
+      throw typeof error === "string" ? error : "Could not compress old proofs";
     }
   }
 

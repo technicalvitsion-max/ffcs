@@ -38,6 +38,10 @@ const NewRequestForm = () => {
       showAlert("Please upload a valid image file (PNG, JPG, JPEG)", AlertType.DANGER);
       return;
     }
+    if (file.size > 12 * 1024 * 1024) {
+      showAlert("Image file is too large (max 12MB). Please select a smaller photo.", AlertType.DANGER);
+      return;
+    }
     setSelectedFile(file);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
