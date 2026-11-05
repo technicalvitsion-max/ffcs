@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. Students Collection
+    // Read is public so students can log in using their Registration Number (lookup email)
+    // and logged-in users can load directory/profile data.
+    // Writes (updating hours, uploading roster) require authentication.
+    match /students/{studentId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // 2. Hour Requests Collection
+    // Logged-in students can create requests and view their submissions.
+    // Logged-in admins can view all requests, approve, reject, edit hours, or delete.
+    match /hourRequests/{requestId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 3. Upload History Collection
+    // Logged-in admins can record and review roster upload batches.
+    match /uploadHistory/{historyId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Fallback: Deny any other collection by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
