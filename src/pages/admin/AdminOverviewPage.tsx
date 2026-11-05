@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { useAuth, type AuthContextType } from "@/context/AuthContext";
 import { useAdminView, type AdminViewContextType } from "@/context/AdminViewContext";
 import { StudentsService } from "@/services/students";
-import { RequestsService } from "@/services/requests";
 import type { Student, HourRequest } from "@/lib/types";
 import * as XLSX from "xlsx";
 import {
@@ -16,31 +14,18 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function AdminOverviewPage() {
-  const { user } = useAuth() as AuthContextType;
+export default function AdminOverviewPage({ requests }: { requests: HourRequest[] }) {
   const { setView } = useAdminView() as AdminViewContextType;
 
   const [students, setStudents] = useState<Partial<Student>[]>([]);
-  const [requests, setRequests] = useState<HourRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [studentsData, requestsData] = await Promise.all([
-          StudentsService.getAllStudents(),
-          user ? RequestsService.getHourRequests(user) : Promise.resolve([]),
-        ]);
-        setStudents(studentsData);
-        setRequests(requestsData);
-      } catch (err) {
-        console.error("Error loading overview data:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, [user]);
+    StudentsService.getAllStudents()
+      .then(setStudents)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   // Derived metrics
   const totalStudents = students.length;

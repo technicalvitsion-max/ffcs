@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   LayoutDashboardIcon,
   ClockIcon,
@@ -22,6 +22,7 @@ import { AuthService } from "@/services/auth";
 import { RequestsService } from "@/services/requests";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import type { HourRequest } from "@/lib/types";
 
 function AdminDashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -30,20 +31,24 @@ function AdminDashboardLayout() {
   const { setLoading } = useLoader() as LoaderContextType;
   const navigate = useNavigate();
 
-  const [pendingCount, setPendingCount] = useState<number>(0);
+  // Single shared fetch — derived counts used everywhere
+  const [allRequests, setAllRequests] = useState<HourRequest[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
 
-  // Load pending request badge
-  useEffect(() => {
+  const refreshRequests = useCallback(() => {
     if (user) {
       RequestsService.getHourRequests(user)
-        .then((reqs) => {
-          const pending = reqs.filter((r) => r.status === "pending").length;
-          setPendingCount(pending);
-        })
+        .then(setAllRequests)
         .catch(() => {});
     }
-  }, [user, view]);
+  }, [user]);
+
+  // One fetch on mount (and whenever user changes)
+  useEffect(() => {
+    refreshRequests();
+  }, [refreshRequests]);
+
+  const pendingCount = allRequests.filter((r) => r.status === "pending").length;
 
   // Check screen size
   useEffect(() => {
@@ -232,8 +237,8 @@ function AdminDashboardLayout() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.2 }}
             >
-              {view === "overview" && <AdminOverviewPage />}
-              {view === "requests" && <HourRequestsPage />}
+              {view === "overview" && <AdminOverviewPage requests={allRequests} />}
+              {view === "requests" && <HourRequestsPage requests={allRequests} onRefresh={refreshRequests} />}
               {view === "students" && <StudentsViewPage />}
               {view === "roster" && <StudentsRosterPage />}
             </motion.div>

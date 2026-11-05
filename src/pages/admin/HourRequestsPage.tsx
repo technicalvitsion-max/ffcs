@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import RequestsList from "../../components/admin/RequestsList";
 import { ProofImageModal } from "../../components/admin/ProofImageModal";
-import { useAuth, type AuthContextType } from "@/context/AuthContext";
 import { useAlert, type AlertContextType } from "@/context/AlertContext";
 import { useLoader, type LoaderContextType } from "@/context/LoaderContext";
 import { RequestsService } from "@/services/requests";
@@ -9,32 +8,13 @@ import { AlertType, type HourRequest } from "@/lib/types";
 import { motion } from "framer-motion";
 import { SparklesIcon } from "lucide-react";
 
-function RequestsComponent() {
-  const { user } = useAuth() as AuthContextType;
+function RequestsComponent({ requests: allRequests, onRefresh }: { requests: HourRequest[]; onRefresh: () => void }) {
   const { showAlert } = useAlert() as AlertContextType;
   const { setLoading } = useLoader() as LoaderContextType;
   const [activeTab, setActiveTab] = useState("pending");
   const [isProofModalOpen, setisProofModalOpen] = useState(false);
   const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
-
-  const [allRequests, setAllRequests] = useState<HourRequest[]>([]);
-
-  useEffect(() => {
-    if (user) {
-      RequestsService.getHourRequests(user)
-        .then(setAllRequests)
-        .catch(() => {});
-    }
-  }, [user]);
-
-  const refreshCounts = () => {
-    if (user) {
-      RequestsService.getHourRequests(user)
-        .then(setAllRequests)
-        .catch(() => {});
-    }
-  };
 
   const handleOptimizeProofs = async () => {
     if (
@@ -57,7 +37,7 @@ function RequestsComponent() {
       } else {
         showAlert("All images in the database are already compact and optimized!", AlertType.SUCCESS);
       }
-      refreshCounts();
+      onRefresh();
     } catch (err) {
       showAlert(typeof err === "string" ? err : "Failed to optimize proofs", AlertType.DANGER);
     } finally {
@@ -154,9 +134,10 @@ function RequestsComponent() {
           >
             <RequestsList
               status={activeTab}
+              requests={allRequests}
               setSelectedProofImage={setSelectedProofImage}
               setisProofModalOpen={setisProofModalOpen}
-              onActionComplete={refreshCounts}
+              onActionComplete={onRefresh}
             />
           </motion.div>
         </div>

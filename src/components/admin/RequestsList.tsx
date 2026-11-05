@@ -2,7 +2,6 @@ import {
   useAlert,
   type AlertContextType,
 } from "@/context/AlertContext";
-import { useAuth, type AuthContextType } from "@/context/AuthContext";
 import { useError, type ErrorContextType } from "@/context/ErrorContext";
 import { useLoader, type LoaderContextType } from "@/context/LoaderContext";
 import { AlertType, type HourRequest } from "@/lib/types";
@@ -24,7 +23,7 @@ import {
   ChevronUpIcon,
   MessageSquareIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { EditRequestModal, type EditRequestConfirmPayload } from "./EditRequestModal";
@@ -312,20 +311,20 @@ function RequestCardItem({
 
 function RequestsList({
   status,
+  requests,
   setSelectedProofImage,
   setisProofModalOpen,
   onActionComplete,
 }: {
   status: string;
+  requests: HourRequest[];
   setSelectedProofImage: (url: string) => void;
   setisProofModalOpen: (isOpen: boolean) => void;
   onActionComplete?: () => void;
 }) {
-  const { user } = useAuth() as AuthContextType;
   const { error, setError } = useError() as ErrorContextType;
   const { setLoading } = useLoader() as LoaderContextType;
   const { showAlert } = useAlert() as AlertContextType;
-  const [requests, setRequests] = useState<HourRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Group By and Sort States
@@ -337,10 +336,6 @@ function RequestsList({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<HourRequest | null>(null);
   const [isApproving, setIsApproving] = useState(false);
-
-  useEffect(() => {
-    RequestsService.getHourRequests(user!).then(setRequests).catch(setError);
-  }, [user, setError]);
 
   const totalRequestsInStatus = useMemo(() => {
     return requests.filter((r) => r.status === status).length;
@@ -542,12 +537,7 @@ function RequestsList({
   };
 
   const refreshRequests = () => {
-    RequestsService.getHourRequests(user!)
-      .then((data) => {
-        setRequests(data);
-        onActionComplete?.();
-      })
-      .catch(setError);
+    onActionComplete?.();
   };
 
   const handleApproveClick = (request: HourRequest) => {
