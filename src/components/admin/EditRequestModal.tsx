@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
+import type { RequestStatus } from "@/lib/types";
 import {
   ClockIcon,
   XIcon,
@@ -14,7 +15,7 @@ import {
 
 export type EditRequestConfirmPayload = {
   hours: number;
-  status: string;
+  status: RequestStatus;
   date: string;
   remark: string;
   newFile?: File | null;
@@ -26,7 +27,7 @@ type EditRequestModalProps = {
   onClose: () => void;
   onConfirm: (payload: EditRequestConfirmPayload) => void;
   initialHours: number;
-  initialStatus?: string;
+  initialStatus?: RequestStatus;
   initialDate?: string;
   initialRemark?: string;
   initialProofUrl?: string | null;
@@ -47,23 +48,15 @@ export const EditRequestModal = ({
   isApproving = false,
 }: EditRequestModalProps) => {
   const [hours, setHours] = useState(initialHours);
-  const [status, setStatus] = useState(isApproving ? "approved" : initialStatus);
+  const [status, setStatus] = useState<RequestStatus>(
+    isApproving ? "approved" : initialStatus
+  );
   const [date, setDate] = useState(initialDate);
   const [remark, setRemark] = useState(initialRemark);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [removeProof, setRemoveProof] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    setHours(initialHours);
-    setStatus(isApproving ? "approved" : initialStatus);
-    setDate(initialDate || new Date().toISOString().split("T")[0]);
-    setRemark(initialRemark || "");
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setRemoveProof(false);
-  }, [initialHours, initialStatus, initialDate, initialRemark, initialProofUrl, isOpen, isApproving]);
 
   if (!isOpen) return null;
 

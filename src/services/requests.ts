@@ -6,6 +6,7 @@ import {
   Role,
   type HourRequest,
   type HourRequestInput,
+  type RequestStatus,
   type User,
 } from "@/lib/types";
 import {
@@ -16,6 +17,7 @@ import {
   getDocs,
   increment,
   query,
+  runTransaction,
   updateDoc,
   where,
   deleteDoc,
@@ -123,92 +125,118 @@ export class RequestsService {
     id: string,
     params: {
       hours: number;
-      status: string;
+      status: RequestStatus;
       date?: string;
       remark?: string;
       newProofFile?: File | null;
       removeProof?: boolean;
     }
-  ): Promise<{ success: boolean }> {
+  ): Promise<{ success: true }> {
     try {
+      if (!Number.isFinite(params.hours) || params.hours < 0) {
+        throw "Hours must be a non-negative number";
+      }
+
+      const proofData = params.newProofFile
+        ? await ImageService.uploadImage(params.newProofFile, id)
+        : undefined;
       const ref = doc(this.collection, id);
-      const snap = await getDoc(ref);
-
-      if (!snap.exists()) {
-        return { success: false, error: "Request not found" } as any;
+      const initialRequestSnap = await getDoc(ref);
+      if (!initialRequestSnap.exists()) {
+        throw "Request not found";
       }
 
-      const currentData = snap.data();
-      const oldStatus = currentData.status || "pending";
-      const oldHours = currentData.hours ?? 0;
-      const registrationNumber = currentData.registrationNumber;
+      const initialRegistrationNumber =
+        initialRequestSnap.data().registrationNumber as string | undefined;
+      const initialStudentSnap = initialRegistrationNumber
+        ? await getDocs(
+            query(
+              this.studentsCollection,
+              where("registrationNumber", "==", initialRegistrationNumber)
+            )
+          )
+        : undefined;
+      const transitionTimestamp = new Date().toISOString();
 
-      const newHours = params.hours;
-      const newStatus = params.status || oldStatus;
-      const todayFormatted = new Date().toISOString().split("T")[0];
+      await runTransaction(db, async (transaction) => {
+        const requestSnap = await transaction.get(ref);
+        if (!requestSnap.exists()) {
+          throw "Request not found";
+        }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updateData: Record<string, any> = {
-        hours: newHours,
-        status: newStatus,
-      };
+        const currentData = requestSnap.data();
+        const oldStatus = currentData.status || "pending";
+        const oldHours = currentData.hours ?? 0;
+        const balanceDiff =
+          oldStatus === "approved"
+            ? params.status === "approved"
+              ? params.hours - oldHours
+              : -oldHours
+            : params.status === "approved"
+              ? params.hours
+              : 0;
 
-      if (params.date !== undefined && params.date !== "") {
-        updateData.date = params.date;
-      }
+        const updateData: Record<string, unknown> = {
+          hours: params.hours,
+          status: params.status,
+        };
 
-      if (params.remark !== undefined) {
-        updateData.remark = params.remark.trim();
-      }
+        if (params.date !== undefined) {
+          updateData.date = params.date;
+        }
+        if (params.remark !== undefined) {
+          updateData.remark = params.remark.trim();
+        }
 
-      // Handle status timestamp transitions
-      if (newStatus === "approved") {
-        updateData.approved = currentData.approved || todayFormatted;
-        updateData.rejected = deleteField();
-      } else if (newStatus === "rejected") {
-        updateData.rejected = currentData.rejected || todayFormatted;
-        updateData.approved = deleteField();
-      } else if (newStatus === "pending") {
-        updateData.approved = deleteField();
-        updateData.rejected = deleteField();
-      }
+        if (params.status === "approved") {
+          updateData.approved =
+            oldStatus === "approved"
+              ? currentData.approved || transitionTimestamp
+              : transitionTimestamp;
+          updateData.rejected = deleteField();
+        } else if (params.status === "rejected") {
+          updateData.rejected =
+            oldStatus === "rejected"
+              ? currentData.rejected || transitionTimestamp
+              : transitionTimestamp;
+          updateData.approved = deleteField();
+        } else {
+          updateData.approved = deleteField();
+          updateData.rejected = deleteField();
+        }
 
-      // Handle proof replacement or removal
-      if (params.newProofFile) {
-        const proofData = await ImageService.uploadImage(params.newProofFile, id);
-        updateData.proof = proofData;
-      } else if (params.removeProof) {
-        updateData.proof = null;
-      }
+        if (proofData) {
+          updateData.proof = proofData;
+        } else if (params.removeProof) {
+          updateData.proof = null;
+        }
 
-      await updateDoc(ref, updateData);
+        let studentRef;
+        if (balanceDiff !== 0) {
+          const registrationNumber = currentData.registrationNumber;
+          if (
+            !registrationNumber ||
+            registrationNumber !== initialRegistrationNumber
+          ) {
+            throw "Cannot update student hours: request has no registration number";
+          }
+          if (!initialStudentSnap || initialStudentSnap.empty) {
+            throw "Cannot update student hours: student was not found";
+          }
+          studentRef = initialStudentSnap.docs[0].ref;
+          const studentSnap = await transaction.get(studentRef);
+          if (!studentSnap.exists()) {
+            throw "Cannot update student hours: student was not found";
+          }
+        }
 
-      // Student hours synchronization
-      let balanceDiff = 0;
-      if (oldStatus === "approved" && newStatus === "approved") {
-        balanceDiff = newHours - oldHours;
-      } else if (oldStatus === "approved" && newStatus !== "approved") {
-        balanceDiff = -oldHours;
-      } else if (oldStatus !== "approved" && newStatus === "approved") {
-        balanceDiff = newHours;
-      } else {
-        // Between pending and rejected: balance is unaffected
-        balanceDiff = 0;
-      }
-
-      if (balanceDiff !== 0 && registrationNumber) {
-        const studentQuery = query(
-          this.studentsCollection,
-          where("registrationNumber", "==", registrationNumber)
-        );
-        const studentSnap = await getDocs(studentQuery);
-
-        if (!studentSnap.empty) {
-          await updateDoc(studentSnap.docs[0].ref, {
+        transaction.update(ref, updateData);
+        if (studentRef) {
+          transaction.update(studentRef, {
             hours: increment(balanceDiff),
           });
         }
-      }
+      });
 
       return { success: true };
     } catch (error) {
@@ -219,7 +247,7 @@ export class RequestsService {
 
   static async handleRequestAction(
     id: string,
-    action: string,
+    action: RequestStatus,
     modifiedHours?: number,
     _newProofData?: { url: string; path: string } | null,
     removeProof?: boolean,
@@ -227,6 +255,9 @@ export class RequestsService {
     date?: string
   ) {
     const snap = await getDoc(doc(this.collection, id));
+    if (!snap.exists()) {
+      throw "Request not found";
+    }
     const hours = modifiedHours ?? (snap.exists() ? snap.data().hours ?? 0 : 0);
     const existingDate = snap.exists() ? snap.data().date : undefined;
     const existingRemark = snap.exists() ? snap.data().remark : undefined;

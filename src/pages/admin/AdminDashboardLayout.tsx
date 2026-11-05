@@ -33,20 +33,30 @@ function AdminDashboardLayout() {
 
   // Single shared fetch — derived counts used everywhere
   const [allRequests, setAllRequests] = useState<HourRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
   const [isDesktop, setIsDesktop] = useState(false);
 
-  const refreshRequests = useCallback(() => {
+  const loadRequests = useCallback(() => {
     if (user) {
       RequestsService.getHourRequests(user)
         .then(setAllRequests)
-        .catch(() => {});
+        .catch((error) => {
+          console.error("Could not load admin hour requests:", error);
+        })
+        .finally(() => setRequestsLoading(false));
     }
   }, [user]);
 
+  const refreshRequests = useCallback(() => {
+    if (!user) return;
+    setRequestsLoading(true);
+    loadRequests();
+  }, [loadRequests, user]);
+
   // One fetch on mount (and whenever user changes)
   useEffect(() => {
-    refreshRequests();
-  }, [refreshRequests]);
+    loadRequests();
+  }, [loadRequests]);
 
   const pendingCount = allRequests.filter((r) => r.status === "pending").length;
 
@@ -76,7 +86,7 @@ function AdminDashboardLayout() {
       id: "requests",
       label: "Hour Requests",
       icon: ClockIcon,
-      badge: pendingCount > 0 ? pendingCount : null,
+      badge: requestsLoading ? "..." : pendingCount > 0 ? pendingCount : null,
     },
     {
       id: "students",

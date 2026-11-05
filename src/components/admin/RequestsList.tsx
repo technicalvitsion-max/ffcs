@@ -89,11 +89,10 @@ function RequestCardItem({
   handleEditClick: (req: HourRequest) => void;
   handleDelete: (req: HourRequest) => void;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const proofUrl =
     typeof request.proof === "string"
       ? request.proof
-      : request.proof?.url || (request as any)?.proofUrl || null;
+      : request.proof?.url || null;
 
   return (
     <motion.div
@@ -879,6 +878,7 @@ function RequestsList({
       )}
 
       <EditRequestModal
+        key={`${selectedRequest?.id || "none"}-${isEditModalOpen}`}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onConfirm={handleModalConfirm}
@@ -889,7 +889,7 @@ function RequestsList({
         initialProofUrl={
           typeof selectedRequest?.proof === "string"
             ? selectedRequest.proof
-            : selectedRequest?.proof?.url || (selectedRequest as any)?.proofUrl || null
+            : selectedRequest?.proof?.url || null
         }
         title={isApproving ? "Approve Request" : "Edit Request Details"}
         isApproving={isApproving}

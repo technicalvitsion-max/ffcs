@@ -13,6 +13,8 @@ export enum Role {
   STUDENT = "student",
 }
 
+export type RequestStatus = "pending" | "approved" | "rejected";
+
 export interface Student {
   email: string;
   hours: number;
@@ -21,8 +23,14 @@ export interface Student {
   registrationNumber: string;
   id: string;
 }
+
+export type RequestProof = {
+  url: string;
+  path: string;
+};
+
 export interface HourRequest {
-  status: string;
+  status: RequestStatus;
   id: string;
   name: string;
   registrationNumber: string;
@@ -32,10 +40,7 @@ export interface HourRequest {
   description: string;
   hours: number;
   date: string;
-  proof: {
-    url: string;
-    path: string;
-  };
+  proof: RequestProof | string | null;
   submitted: string;
   approved?: string;
   rejected?: string;

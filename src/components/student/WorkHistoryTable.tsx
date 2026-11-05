@@ -71,6 +71,9 @@ export default function WorkHistoryTable({ data }: { data: HourRequest[] }) {
                 Status
               </th>
               <th className="px-6 py-5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Admin Remark
+              </th>
+              <th className="px-6 py-5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
                 Submitted
               </th>
               <th className="px-6 py-5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
@@ -81,8 +84,10 @@ export default function WorkHistoryTable({ data }: { data: HourRequest[] }) {
           <tbody className="divide-y divide-white/5">
             <AnimatePresence>
               {data.map((work, index) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const proofUrl = typeof work.proof === "string" ? work.proof : work.proof?.url || (work as any)?.proofUrl || null;
+                const proofUrl =
+                  typeof work.proof === "string"
+                    ? work.proof
+                    : work.proof?.url || null;
 
                 return (
                   <motion.tr
@@ -96,12 +101,6 @@ export default function WorkHistoryTable({ data }: { data: HourRequest[] }) {
                       <div className="font-bold text-white group-hover:text-gray-300 transition-colors">
                         {work.workName}
                       </div>
-                      {work.remark && (
-                        <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-400 font-medium max-w-xs truncate">
-                          <MessageSquareIcon className="w-3 h-3 shrink-0" />
-                          <span title={work.remark}>Remark: {work.remark}</span>
-                        </div>
-                      )}
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-gray-300 border border-white/5">
@@ -145,6 +144,18 @@ export default function WorkHistoryTable({ data }: { data: HourRequest[] }) {
                       >
                         {work.status.charAt(0).toUpperCase() + work.status.slice(1)}
                       </span>
+                    </td>
+                    <td className="px-6 py-5 text-sm text-gray-300 min-w-56 max-w-sm">
+                      {work.remark ? (
+                        <div className="flex items-start gap-2">
+                          <MessageSquareIcon className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                          <span className="whitespace-pre-wrap break-words">
+                            {work.remark}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-600">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(work.submitted)}
